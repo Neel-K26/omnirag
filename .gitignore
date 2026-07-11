@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+backend/venv/
+backend/.venv/
+node_modules/
+frontend/.next/
+frontend/out/
+*.index
+*.faiss
+.DS_Store
+.env
+.env.local
+.env
+.env.local

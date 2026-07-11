@@ -1,0 +1,30 @@
+Type 2 Diabetes Mellitus: Management Principles
+
+Type 2 diabetes mellitus is a chronic metabolic disorder characterized by insulin
+resistance and relative insulin deficiency, resulting in elevated blood glucose levels.
+Common symptoms include polyuria, polydipsia, unexplained weight loss, fatigue, and
+blurred vision, though many patients are asymptomatic at diagnosis and identified through
+routine screening.
+
+Diagnosis is typically based on fasting plasma glucose, oral glucose tolerance testing,
+or glycated hemoglobin (HbA1c) levels, with an HbA1c of 6.5% or higher generally
+indicating diabetes.
+
+Untreated or poorly controlled diabetes increases the risk of both microvascular
+complications (retinopathy, nephropathy, neuropathy) and macrovascular complications
+(cardiovascular disease, stroke, peripheral artery disease). Chronic hyperglycemia can
+also impair wound healing and increase infection risk.
+
+Management is multifactorial:
+- Lifestyle intervention: structured diet planning, regular physical activity, and
+  weight loss are foundational and can meaningfully improve glycemic control.
+- Pharmacological therapy: metformin is typically the first-line medication due to its
+  efficacy, safety profile, and low cost. Additional agents such as SGLT2 inhibitors,
+  GLP-1 receptor agonists, sulfonylureas, or insulin may be added based on individual
+  glycemic targets, cardiovascular risk, and renal function.
+- Monitoring: regular self-monitoring of blood glucose and periodic HbA1c testing help
+  guide treatment adjustments. Annual screening for retinopathy, nephropathy, and
+  peripheral neuropathy is recommended.
+
+Patient education on recognizing and managing hypoglycemia, especially for those on
+insulin or sulfonylureas, is an important component of safe long-term management.

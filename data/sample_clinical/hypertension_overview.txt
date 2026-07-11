@@ -1,0 +1,31 @@
+Hypertension: Clinical Overview
+
+Hypertension, or high blood pressure, is a chronic condition in which the force of blood
+against artery walls is persistently elevated. It is typically diagnosed when systolic
+blood pressure is 130 mmHg or higher, or diastolic pressure is 80 mmHg or higher, on
+repeated measurements.
+
+Hypertension is a major modifiable risk factor for cardiovascular disease, including
+stroke, myocardial infarction, heart failure, and chronic kidney disease. Most cases are
+classified as primary (essential) hypertension, with no single identifiable cause, though
+genetics, age, obesity, high sodium intake, physical inactivity, and chronic stress are
+recognized contributors. Secondary hypertension, caused by an identifiable underlying
+condition such as renal artery stenosis or endocrine disorders, accounts for a smaller
+proportion of cases.
+
+First-line management emphasizes lifestyle modification: reducing sodium intake, adopting
+a diet rich in fruits, vegetables, and low-fat dairy (such as the DASH diet), regular
+aerobic exercise, weight management, limiting alcohol consumption, and smoking cessation.
+
+When lifestyle changes are insufficient, pharmacological treatment is introduced.
+Commonly used drug classes include:
+- ACE inhibitors (e.g., lisinopril) and ARBs (e.g., losartan), which relax blood vessels.
+- Calcium channel blockers (e.g., amlodipine), which reduce vascular resistance.
+- Thiazide diuretics (e.g., hydrochlorothiazide), which reduce blood volume.
+- Beta blockers, generally reserved for patients with specific comorbidities such as
+  coronary artery disease.
+
+Choice of agent depends on patient age, comorbidities (e.g., diabetes, kidney disease),
+race-based response patterns documented in clinical guidelines, and tolerability of side
+effects. Regular blood pressure monitoring and medication adherence are essential for
+long-term risk reduction.

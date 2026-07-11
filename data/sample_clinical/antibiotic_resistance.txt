@@ -1,0 +1,29 @@
+Antimicrobial Resistance: Mechanisms and Clinical Implications
+
+Antimicrobial resistance (AMR) occurs when bacteria, viruses, fungi, or parasites evolve
+mechanisms that reduce or eliminate the effectiveness of drugs designed to treat the
+infections they cause. Bacterial resistance to antibiotics is among the most pressing
+concerns in clinical medicine, contributing to longer hospital stays, higher treatment
+costs, and increased mortality.
+
+Common mechanisms of bacterial resistance include:
+- Enzymatic drug inactivation, such as beta-lactamase production, which breaks down
+  penicillins and related antibiotics.
+- Alteration of drug target sites, reducing the binding affinity of the antibiotic.
+- Efflux pumps that actively expel the antibiotic from the bacterial cell.
+- Reduced membrane permeability, limiting antibiotic entry.
+
+Resistance can arise through spontaneous mutation or be acquired via horizontal gene
+transfer between bacteria, including plasmid-mediated transfer, which allows resistance
+genes to spread rapidly, even across different bacterial species.
+
+Overuse and misuse of antibiotics, in both clinical and agricultural settings, are major
+drivers of resistance development. Incomplete treatment courses, unnecessary prescribing
+for viral infections, and widespread agricultural use all contribute to selective
+pressure favoring resistant strains.
+
+Clinical strategies to mitigate AMR include antimicrobial stewardship programs that
+promote judicious prescribing, infection prevention and control measures to limit
+transmission, use of narrow-spectrum agents when appropriate, and susceptibility testing
+to guide targeted therapy. Development of new antimicrobial agents and alternative
+therapies, such as bacteriophage therapy, remains an active area of research.
