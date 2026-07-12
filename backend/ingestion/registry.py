@@ -2,9 +2,10 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from config import get_settings
 from models.schemas import Document
 
-REGISTRY_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "index" / "documents.json"
+REGISTRY_PATH = Path(get_settings().data_dir) / "documents.json"
 
 
 class DocumentRegistry:

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,6 +17,19 @@ class Settings(BaseSettings):
 
     app_name: str = "OmniRAG"
     environment: str = "development"
+
+    # Comma-separated list of allowed CORS origins (exact matches — no wildcards), e.g. the
+    # Vercel production domain plus a custom domain: "https://omnirag.vercel.app,https://omnirag.com"
+    frontend_url: str = "http://localhost:3000"
+
+    # Self-contained default (backend/data/index) — works regardless of Docker build context,
+    # unlike a path climbing to a repo-root sibling. Override to point at a mounted volume
+    # in production, since container filesystems are ephemeral by default (see README).
+    data_dir: str = str(Path(__file__).resolve().parent / "data" / "index")
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.frontend_url.split(",") if origin.strip()]
 
 
 @lru_cache

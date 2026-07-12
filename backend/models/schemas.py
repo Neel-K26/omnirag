@@ -82,3 +82,26 @@ class RagasScores(BaseModel):
     faithfulness: float
     answer_relevancy: float
     context_precision: float
+
+
+class StrategyResult(BaseModel):
+    strategy: RetrievalStrategy
+    latency_ms: float
+    answer: str
+    chunks: list[Chunk]
+    ragas: RagasScores
+
+
+class BenchmarkQueryResult(BaseModel):
+    query: str
+    answer: str
+    routing: RoutingDecision
+    num_hops: int
+    latency_ms: float
+    ragas: RagasScores
+
+
+class BenchmarkRunResponse(BaseModel):
+    results: list[BenchmarkQueryResult]
+    aggregate: RagasScores
+    aggregate_latency_ms: float

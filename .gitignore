@@ -8,6 +8,7 @@ frontend/.next/
 frontend/out/
 *.index
 *.faiss
+backend/data/
 .DS_Store
 .env
 .env.local

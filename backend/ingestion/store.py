@@ -7,9 +7,10 @@ import faiss
 import numpy as np
 from rank_bm25 import BM25Okapi
 
+from config import get_settings
 from models.schemas import Chunk
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "index"
+DATA_DIR = Path(get_settings().data_dir)
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 

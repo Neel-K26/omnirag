@@ -1,4 +1,11 @@
-import type { Chunk, ChatStreamEvent, DocumentItem, RagasScores } from "./types";
+import type {
+  BenchmarkRunResponse,
+  Chunk,
+  ChatStreamEvent,
+  CompareResponse,
+  DocumentItem,
+  RagasScores,
+} from "./types";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -90,4 +97,23 @@ export async function evaluateChat(query: string, response: string, contexts: st
     body: JSON.stringify({ query, response, contexts }),
   });
   return handleJsonResponse<RagasScores>(res);
+}
+
+export async function compareStrategies(query: string): Promise<CompareResponse> {
+  const res = await fetch(`${API_URL}/retrieval/compare`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+  return handleJsonResponse<CompareResponse>(res);
+}
+
+export async function getBenchmarkQueries(): Promise<string[]> {
+  const res = await fetch(`${API_URL}/benchmark/queries`);
+  return handleJsonResponse<string[]>(res);
+}
+
+export async function runBenchmark(): Promise<BenchmarkRunResponse> {
+  const res = await fetch(`${API_URL}/benchmark/run`, { method: "POST" });
+  return handleJsonResponse<BenchmarkRunResponse>(res);
 }

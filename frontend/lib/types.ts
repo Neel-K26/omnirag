@@ -88,3 +88,31 @@ export interface ChatTurn {
   streaming: boolean;
   error: string | null;
 }
+
+export interface StrategyResult {
+  strategy: RetrievalStrategy;
+  latency_ms: number;
+  answer: string;
+  chunks: Chunk[];
+  ragas: RagasScores;
+}
+
+export interface CompareResponse {
+  query: string;
+  results: StrategyResult[];
+}
+
+export interface BenchmarkQueryResult {
+  query: string;
+  answer: string;
+  routing: RoutingDecision;
+  num_hops: number;
+  latency_ms: number;
+  ragas: RagasScores;
+}
+
+export interface BenchmarkRunResponse {
+  results: BenchmarkQueryResult[];
+  aggregate: RagasScores;
+  aggregate_latency_ms: number;
+}
