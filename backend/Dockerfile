@@ -8,11 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 
-# Install CPU-only torch explicitly first. Plain `pip install torch` on PyPI resolves to the
-# CUDA-enabled wheel (~3GB+ larger) even on machines with no GPU — wasted weight for this
-# CPU-only embedding workload (all-MiniLM-L6-v2). sentence-transformers (in requirements.txt)
-# will then see torch already satisfied and won't pull the CUDA build over it.
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+# requirements.txt itself pins an exact CPU-only torch build (torch==2.9.1+cpu via
+# --extra-index-url) — no separate install step needed here.
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
