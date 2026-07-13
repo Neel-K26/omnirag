@@ -25,22 +25,26 @@ beautifulsoup4>=4.12.3,<5.0.0
 # retrieval
 cohere>=5.0.0,<6.0.0
 
-# routing / generation — bounded by langchain-groq's own constraint below (groq<1,>=0.30.0);
-# the interface we use (chat.completions.create, streaming, response_format=json_object) is
-# stable across this whole range.
-groq>=0.30.0,<1.0.0
+# routing / generation — google-genai is the actively maintained Gemini SDK (the older
+# google-generativeai package is fully deprecated: no more updates or bug fixes).
+google-genai>=2.11.0,<3.0.0
 
 # evaluation — pinned as one consistent pre-1.0 langchain graph (ragas 0.2.15 predates
-# the langchain 1.0 rewrite; mixing in newer langchain-* packages breaks its imports, and
-# newer langchain-groq requires groq>=1, which conflicts with the pin above). Bounded ranges
-# (not exact ==) so patch releases within the compatible band still resolve, but nothing here
-# is allowed to drift into the langchain 1.0 / groq 1.0 series.
+# the langchain 1.0 rewrite; mixing in newer langchain-* packages breaks its imports).
+# Bounded ranges (not exact ==) so patch releases within the compatible band still resolve,
+# but nothing here is allowed to drift into the langchain 1.0 series.
+# Note: no langchain-google-genai here — every version compatible with this langchain-core
+# band depends on the legacy google-ai-generativelanguage client, which rejects this
+# project's API key outright (confirmed via direct testing, both gRPC and REST transport).
+# Every version using the working google-genai SDK requires langchain-core>=1.0, which
+# breaks ragas. The RAGAS judge instead implements ragas's own BaseRagasLLM interface
+# directly against google-genai (see evaluation/ragas_eval.py) — same pattern already used
+# for the embeddings side to avoid an equivalent langchain_huggingface conflict.
 ragas>=0.2.15,<0.3.0
 langchain>=0.3.27,<0.4.0
 langchain-core>=0.3,<0.4
 langchain-community>=0.3.27,<0.4.0
 langchain-openai>=0.3,<0.4
-langchain-groq>=0.3.8,<0.4.0
 
 # testing
 pytest>=8.3.4,<9.0.0

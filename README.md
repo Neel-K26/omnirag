@@ -8,9 +8,10 @@ domains (legal, enterprise, financial).
 
 ## Stack
 
-- **Backend**: FastAPI (Python 3.12), FAISS + BM25 hybrid retrieval, Cohere Rerank, Groq
-  (`llama-3.3-70b-versatile` for generation/routing-fallback, `llama-3.1-8b-instant` for the
-  sufficiency check), RAGAS (evaluated by the same Groq model)
+- **Backend**: FastAPI (Python 3.12), FAISS + BM25 hybrid retrieval, Cohere Rerank, Gemini
+  (`gemini-flash-lite-latest` for generation, routing fallback, and the sufficiency check),
+  RAGAS (evaluated by the same Gemini model, via a small custom `BaseRagasLLM` wrapper —
+  see [Known issues](#known-issues))
 - **Frontend**: Next.js 16 (App Router), Tailwind CSS v4, shadcn/ui
 
 ## Local development
@@ -27,7 +28,7 @@ uvicorn main:app --reload --loop asyncio
 
 `--loop asyncio` is required — see [Known issues](#known-issues) below.
 
-Copy `.env.example` (repo root) to `.env` and fill in `GROQ_API_KEY` / `COHERE_API_KEY`.
+Copy `.env.example` (repo root) to `.env` and fill in `GEMINI_API_KEY` / `COHERE_API_KEY`.
 
 ### Frontend
 
@@ -44,7 +45,7 @@ Copy `frontend/.env.example` to `frontend/.env.local` (defaults already point at
 
 | Variable | Where | Purpose |
 |---|---|---|
-| `GROQ_API_KEY` | backend | Groq API key (generation, routing fallback, sufficiency check, RAGAS judge) |
+| `GEMINI_API_KEY` | backend | Gemini API key (generation, routing fallback, sufficiency check, RAGAS judge) |
 | `COHERE_API_KEY` | backend | Cohere API key (reranking) |
 | `FRONTEND_URL` | backend | Comma-separated list of allowed CORS origins. Default `http://localhost:3000` |
 | `DATA_DIR` | backend | Where the FAISS index / BM25 corpus / document registry persist. Default `backend/data/index` (self-contained, container-safe) |
@@ -60,9 +61,26 @@ No API keys are hardcoded anywhere in source — everything above is read via
   implementation. Without this flag the app crashes on boot the moment `/chat/evaluate` (or
   anything importing `evaluation.ragas_eval`) is reached. This is baked into the Dockerfile's
   `CMD` already; if you invoke uvicorn any other way (e.g. a custom start script), keep the flag.
-- **Groq free-tier daily token quota.** 100,000 tokens/day on `llama-3.3-70b-versatile` is easy
-  to exhaust during heavy testing (adaptive retrieval, generation, and RAGAS evaluation all call
-  Groq). Requests fail with a 429 until the daily window rolls over — not a bug in this app.
+- **Gemini model availability varies by API key/project, not just by model name.** During
+  migration, `gemini-2.5-flash` (Google's currently-listed stable flash model) returned a hard
+  404 "no longer available to new users" for this project's key, and dated IDs like
+  `gemini-2.0-flash` returned a 429 with an explicit `limit: 0` free-tier quota — not a
+  transient rate limit, a permanent zero allocation for that model on this project. The
+  `gemini-flash-lite-latest` alias (currently resolving to `gemini-3.1-flash-lite`) was the
+  one tier confirmed working. If you swap in your own API key, re-verify model access before
+  assuming `gemini-flash-lite-latest` is the right (or only working) choice for your project.
+- **No `langchain-google-genai` in requirements.txt.** Every version compatible with the
+  pinned pre-1.0 `langchain-core` band (required by `ragas==0.2.15`) depends on the legacy
+  `google-ai-generativelanguage` client, which rejected this project's API key outright in
+  testing (both gRPC and REST transport). Every version using the modern, working `google-genai`
+  SDK requires `langchain-core>=1.0`, which breaks `ragas`'s own imports — the same class of
+  conflict documented above for the RAGAS/langchain stack generally. The RAGAS judge instead
+  implements `ragas`'s own `BaseRagasLLM` interface directly against `google-genai`
+  (`evaluation/ragas_eval.py`), the same pattern already used on the embeddings side to avoid
+  an equivalent `langchain_huggingface` conflict.
+- **Gemini free-tier rate limits.** Requests can still be throttled or quota-exhausted during
+  heavy testing (adaptive retrieval, generation, and RAGAS evaluation all call Gemini) — not a
+  bug in this app.
 
 ## Deployment
 
@@ -73,7 +91,7 @@ Not yet deployed — this section documents what's needed when you are ready.
 1. **New service, root directory = `backend/`.** Railway auto-detects the `Dockerfile` there
    and builds from it — no build/start command overrides needed (the `Dockerfile`'s `CMD`
    already binds to Railway's injected `$PORT` and uses `--loop asyncio`).
-2. **Environment variables to set** (Railway → Variables): `GROQ_API_KEY`, `COHERE_API_KEY`,
+2. **Environment variables to set** (Railway → Variables): `GEMINI_API_KEY`, `COHERE_API_KEY`,
    `FRONTEND_URL` (set this to your Vercel production URL once you have it — see the
    chicken-and-egg note below).
 3. **Health check**: `/health`, already implemented and exercised by the Dockerfile's

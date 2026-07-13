@@ -54,7 +54,7 @@ def _stream_chat(query: str) -> Iterator[str]:
     prompt_tokens = usage_holder.get("prompt_tokens")
     completion_tokens = usage_holder.get("completion_tokens")
     cost = (
-        estimate_cost_usd(settings.groq_model, prompt_tokens, completion_tokens)
+        estimate_cost_usd(settings.gemini_model, prompt_tokens, completion_tokens)
         if prompt_tokens is not None and completion_tokens is not None
         else None
     )

@@ -18,7 +18,7 @@ def test_get_benchmark_queries_returns_ten_presets():
 
 def test_run_benchmark_end_to_end(monkeypatch, populated_store):
     monkeypatch.setattr(hybrid, "get_vector_store", lambda: populated_store)
-    # Full pipeline runs Groq calls per query (sufficiency + generation + RAGAS judge) —
+    # Full pipeline runs Gemini calls per query (sufficiency + generation + RAGAS judge) —
     # trim to 2 presets here to prove correctness without burning the full 10-query quota.
     monkeypatch.setattr(benchmark_router, "BENCHMARK_QUERIES", benchmark_module.BENCHMARK_QUERIES[:2])
 

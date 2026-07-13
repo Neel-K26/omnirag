@@ -1,7 +1,9 @@
 from collections.abc import Iterator
 
+from google.genai import types
+
 from config import get_settings
-from groq_client import get_groq_client
+from gemini_client import get_gemini_client
 from models.schemas import Chunk, Citation
 
 # Positioned as a clinical literature assistant for V1; swap DOMAIN to retarget
@@ -35,24 +37,24 @@ def build_citations(chunks: list[Chunk]) -> list[Citation]:
 
 def stream_answer(query: str, chunks: list[Chunk], usage_holder: dict | None = None) -> Iterator[str]:
     """Streams the answer text. If usage_holder is passed, it is populated in-place with
-    {"prompt_tokens", "completion_tokens"} once Groq reports usage (on the final chunk)."""
+    {"prompt_tokens", "completion_tokens"} — Gemini reports cumulative usage on every chunk,
+    so the holder just ends up holding whatever the last chunk reported."""
     settings = get_settings()
-    client = get_groq_client()
+    client = get_gemini_client()
     context = _format_context(chunks)
-    messages = [
-        {"role": "system", "content": GENERATION_SYSTEM_PROMPT},
-        {"role": "user", "content": f"Source passages:\n\n{context}\n\nQuestion: {query}"},
-    ]
-    stream = client.chat.completions.create(
-        model=settings.groq_model,
-        messages=messages,
-        temperature=0.2,
-        stream=True,
+    user_content = f"Source passages:\n\n{context}\n\nQuestion: {query}"
+
+    stream = client.models.generate_content_stream(
+        model=settings.gemini_model,
+        contents=user_content,
+        config=types.GenerateContentConfig(
+            system_instruction=GENERATION_SYSTEM_PROMPT,
+            temperature=0.2,
+        ),
     )
-    for event in stream:
-        if usage_holder is not None and event.usage:
-            usage_holder["prompt_tokens"] = event.usage.prompt_tokens
-            usage_holder["completion_tokens"] = event.usage.completion_tokens
-        delta = event.choices[0].delta.content
-        if delta:
-            yield delta
+    for chunk in stream:
+        if usage_holder is not None and chunk.usage_metadata:
+            usage_holder["prompt_tokens"] = chunk.usage_metadata.prompt_token_count
+            usage_holder["completion_tokens"] = chunk.usage_metadata.candidates_token_count
+        if chunk.text:
+            yield chunk.text

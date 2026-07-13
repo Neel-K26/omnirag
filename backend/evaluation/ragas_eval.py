@@ -1,13 +1,17 @@
+import asyncio
 from functools import lru_cache
 
-from langchain_groq import ChatGroq
+from google.genai import types
+from langchain_core.outputs import Generation, LLMResult
+from langchain_core.prompt_values import PromptValue
 from ragas import EvaluationDataset, SingleTurnSample, evaluate
 from ragas.embeddings.base import BaseRagasEmbeddings
-from ragas.llms import LangchainLLMWrapper
+from ragas.llms.base import BaseRagasLLM
 from ragas.metrics import LLMContextPrecisionWithoutReference, answer_relevancy, faithfulness
 from ragas.run_config import RunConfig
 
 from config import get_settings
+from gemini_client import get_gemini_client
 from ingestion.embeddings import embed_texts
 from models.schemas import RagasScores
 
@@ -36,11 +40,78 @@ class _SentenceTransformerRagasEmbeddings(BaseRagasEmbeddings):
         return self.embed_documents(texts)
 
 
+class _GeminiRagasLLM(BaseRagasLLM):
+    """Implements ragas's own BaseRagasLLM interface directly against the google-genai SDK,
+    bypassing langchain-google-genai entirely (same pattern as the embeddings wrapper above).
+
+    Every langchain-google-genai version compatible with our pinned pre-1.0 langchain-core
+    (required by ragas==0.2.15) depends on the legacy google-ai-generativelanguage client,
+    which rejects this project's API key outright (confirmed via direct testing — both gRPC
+    and REST transports fail). Every version using the working google-genai SDK requires
+    langchain-core>=1.0, which breaks ragas's own imports. There is no version satisfying both."""
+
+    def __init__(self, model: str):
+        super().__init__()
+        self.model = model
+        self.set_run_config(RunConfig())
+
+    def is_finished(self, response: LLMResult) -> bool:
+        # Judge prompts are short and bounded; skip ragas's default per-call warning log
+        # for a finish-reason check we don't track.
+        return True
+
+    def _generate_one(self, prompt_text: str, temperature: float) -> str:
+        client = get_gemini_client()
+        response = client.models.generate_content(
+            model=self.model,
+            contents=prompt_text,
+            config=types.GenerateContentConfig(temperature=temperature),
+        )
+        return response.text or ""
+
+    async def _agenerate_one(self, prompt_text: str, temperature: float) -> str:
+        client = get_gemini_client()
+        response = await client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt_text,
+            config=types.GenerateContentConfig(temperature=temperature),
+        )
+        return response.text or ""
+
+    def generate_text(
+        self,
+        prompt: PromptValue,
+        n: int = 1,
+        temperature: float | None = None,
+        stop: list[str] | None = None,
+        callbacks=None,
+    ) -> LLMResult:
+        if temperature is None:
+            temperature = self.get_temperature(n)
+        prompt_text = prompt.to_string()
+        generations = [Generation(text=self._generate_one(prompt_text, temperature)) for _ in range(n)]
+        return LLMResult(generations=[generations])
+
+    async def agenerate_text(
+        self,
+        prompt: PromptValue,
+        n: int = 1,
+        temperature: float | None = None,
+        stop: list[str] | None = None,
+        callbacks=None,
+    ) -> LLMResult:
+        if temperature is None:
+            temperature = self.get_temperature(n)
+        prompt_text = prompt.to_string()
+        texts = await asyncio.gather(*(self._agenerate_one(prompt_text, temperature) for _ in range(n)))
+        generations = [Generation(text=t) for t in texts]
+        return LLMResult(generations=[generations])
+
+
 @lru_cache
-def get_ragas_llm() -> LangchainLLMWrapper:
+def get_ragas_llm() -> _GeminiRagasLLM:
     settings = get_settings()
-    chat = ChatGroq(model=settings.groq_model, api_key=settings.groq_api_key, temperature=0)
-    return LangchainLLMWrapper(chat)
+    return _GeminiRagasLLM(model=settings.gemini_model)
 
 
 @lru_cache

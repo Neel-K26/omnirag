@@ -1,5 +1,7 @@
+from google.genai import types
+
 from config import get_settings
-from groq_client import get_groq_client
+from gemini_client import get_gemini_client
 from models.schemas import QueryIntent, RetrievalStrategy, RoutingDecision
 
 COMPARATIVE_KEYWORDS = [
@@ -74,17 +76,17 @@ def classify_rule_based(query: str) -> QueryIntent | None:
 
 def classify_prompt_based(query: str) -> QueryIntent:
     settings = get_settings()
-    client = get_groq_client()
-    response = client.chat.completions.create(
-        model=settings.groq_model,
-        messages=[
-            {"role": "system", "content": CLASSIFY_SYSTEM_PROMPT},
-            {"role": "user", "content": query},
-        ],
-        temperature=0,
-        max_tokens=5,
+    client = get_gemini_client()
+    response = client.models.generate_content(
+        model=settings.gemini_model,
+        contents=query,
+        config=types.GenerateContentConfig(
+            system_instruction=CLASSIFY_SYSTEM_PROMPT,
+            temperature=0,
+            max_output_tokens=5,
+        ),
     )
-    label = (response.choices[0].message.content or "").strip().lower()
+    label = (response.text or "").strip().lower()
     try:
         return QueryIntent(label)
     except ValueError:
