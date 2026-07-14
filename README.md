@@ -39,7 +39,8 @@ npm run dev
 ```
 
 Copy `frontend/.env.example` to `frontend/.env.local` (defaults already point at
-`http://localhost:8000`).
+`http://localhost:8000`) — note, however, that `NEXT_PUBLIC_API_URL` is currently
+hardcoded in `frontend/next.config.ts` and will ignore this file; see that file's comment.
 
 ## Environment variables
 
@@ -49,10 +50,11 @@ Copy `frontend/.env.example` to `frontend/.env.local` (defaults already point at
 | `COHERE_API_KEY` | backend | Cohere API key (reranking) |
 | `FRONTEND_URL` | backend | Comma-separated list of allowed CORS origins. Default `http://localhost:3000` |
 | `DATA_DIR` | backend | Where the FAISS index / BM25 corpus / document registry persist. Default `backend/data/index` (self-contained, container-safe) |
-| `NEXT_PUBLIC_API_URL` | frontend | URL of the backend API. Default `http://localhost:8000` |
+| `NEXT_PUBLIC_API_URL` | frontend | URL of the backend API. **Currently hardcoded as a build-time constant in `frontend/next.config.ts`** — editing this file, `.env.local`, or Vercel's dashboard has no effect until that hardcode is changed or removed. See that file's comment for why. |
 
 No API keys are hardcoded anywhere in source — everything above is read via
-`pydantic-settings` (backend) / `process.env` (frontend) with local-dev fallback defaults only.
+`pydantic-settings` (backend) / `process.env` (frontend) with local-dev fallback defaults,
+except `NEXT_PUBLIC_API_URL` as noted.
 
 ## Known issues
 
