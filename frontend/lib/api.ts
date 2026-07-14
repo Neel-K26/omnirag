@@ -7,7 +7,7 @@ import type {
   RagasScores,
 } from "./types";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://omnirag-87oc.onrender.com";
 
 async function handleJsonResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
