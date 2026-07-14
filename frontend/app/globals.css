@@ -161,6 +161,28 @@
   animation: flow-sweep 2.2s ease-in-out infinite;
 }
 
+/* Vertical variant — same idea, sweeping top-to-bottom through a vertical connector. */
+@keyframes flow-sweep-vertical {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(220%);
+    opacity: 0;
+  }
+}
+
+.animate-flow-sweep-vertical {
+  animation: flow-sweep-vertical 2.2s ease-in-out infinite;
+}
+
 @keyframes glow-pulse {
   0%,
   100% {
@@ -177,6 +199,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-flow-sweep,
+  .animate-flow-sweep-vertical,
   .animate-glow-pulse {
     animation: none;
   }
