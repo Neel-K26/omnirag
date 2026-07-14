@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { LandingHero } from "@/components/LandingHero";
 import { LandingPipeline } from "@/components/LandingPipeline";
 import { LandingFeatures } from "@/components/LandingFeatures";
-import { LandingTechStack } from "@/components/LandingTechStack";
 import { LandingFooter } from "@/components/LandingFooter";
 
 export const metadata: Metadata = {
@@ -17,7 +16,6 @@ export default function LandingPage() {
       <LandingHero />
       <LandingPipeline />
       <LandingFeatures />
-      <LandingTechStack />
       <LandingFooter />
     </div>
   );
