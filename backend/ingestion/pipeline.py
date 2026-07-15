@@ -1,7 +1,7 @@
 import uuid
 
 from ingestion.chunking import chunk_text
-from ingestion.embeddings import embed_texts
+from ingestion.embeddings import embed_documents
 from ingestion.parsers import parse_pdf, parse_text, parse_url
 from ingestion.registry import get_document_registry
 from ingestion.store import DATA_DIR, get_vector_store
@@ -36,7 +36,7 @@ def _build_chunks(document: Document, pages: list[tuple[int | None, str]]) -> li
 def _embed_and_store(document: Document, chunks: list[Chunk]) -> None:
     if not chunks:
         return
-    embeddings = embed_texts([c.text for c in chunks])
+    embeddings = embed_documents([c.text for c in chunks])
     store = get_vector_store()
     store.add(chunks, embeddings)
     store.save(DATA_DIR)

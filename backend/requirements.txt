@@ -1,11 +1,3 @@
-# CPU-only torch, pinned to an exact +cpu build. Plain `pip install torch` (pulled in
-# transitively by sentence-transformers below) resolves to the CUDA-enabled wheel from PyPI
-# — several GB larger — even with no GPU present. A bare --extra-index-url isn't enough to
-# override that (pip is satisfied once it finds a match on the primary index and won't check
-# the extra one), so the exact +cpu local version is required to force resolution from here.
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.9.1+cpu
-
 fastapi>=0.115.6,<0.116.0
 uvicorn[standard]>=0.34.0,<0.35.0
 pydantic>=2.10.4,<3.0.0
@@ -17,12 +9,16 @@ python-multipart>=0.0.20,<0.1.0
 pymupdf>=1.25.1,<2.0.0
 rank-bm25>=0.2.2,<0.3.0
 faiss-cpu>=1.9.0,<2.0.0
-sentence-transformers>=3.3.1,<4.0.0
 numpy
 requests>=2.32.3,<3.0.0
 beautifulsoup4>=4.12.3,<5.0.0
 
-# retrieval
+# retrieval + embeddings — Cohere embed-english-light-v3.0 (384-dim), replacing local
+# sentence-transformers+torch entirely. That local stack alone measured ~630MB RSS once
+# actually used (import + model weights + first encode() call) — structurally incompatible
+# with Render's 512MB free-tier limit regardless of lazy-loading, since chat always needs at
+# least a query embedding. A remote embeddings API has zero local RAM cost, at the trade-off
+# of a network call on every embed (ingestion and every query's retrieval step alike).
 cohere>=5.0.0,<6.0.0
 
 # routing / generation — google-genai is the actively maintained Gemini SDK (the older

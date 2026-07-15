@@ -1,3 +1,4 @@
+import evaluation.ragas_eval as ragas_eval_module
 import routers.benchmark as benchmark_router
 from generation.adaptive import adaptive_retrieve
 from models.schemas import (
@@ -38,8 +39,11 @@ def test_run_benchmark_aggregates_mean_correctly(monkeypatch):
         "query two": RagasScores(faithfulness=0.5, answer_relevancy=0.4, context_precision=0.3),
         "query three": RagasScores(faithfulness=0.0, answer_relevancy=0.2, context_precision=0.9),
     }
+    # evaluate_response is imported lazily inside _run_benchmark_query now (keeps ragas's
+    # ~300MB import cost off the hot path), so it must be patched at its source module —
+    # routers.benchmark no longer has it as a module-level attribute to patch directly.
     monkeypatch.setattr(
-        benchmark_router, "evaluate_response", lambda query, answer, contexts: scores_by_query[query]
+        ragas_eval_module, "evaluate_response", lambda query, answer, contexts: scores_by_query[query]
     )
 
     result = benchmark_router.run_benchmark()
@@ -68,7 +72,7 @@ def test_run_benchmark_handles_empty_chunks_without_calling_ragas(monkeypatch):
     def fail_if_called(*args, **kwargs):
         raise AssertionError("evaluate_response should not be called when there are no chunks")
 
-    monkeypatch.setattr(benchmark_router, "evaluate_response", fail_if_called)
+    monkeypatch.setattr(ragas_eval_module, "evaluate_response", fail_if_called)
 
     result = benchmark_router.run_benchmark()
     assert result.results[0].ragas == RagasScores(faithfulness=0.0, answer_relevancy=0.0, context_precision=0.0)

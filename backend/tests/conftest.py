@@ -1,6 +1,6 @@
 import pytest
 
-from ingestion.embeddings import embed_texts
+from ingestion.embeddings import embed_documents
 from ingestion.store import VectorStore
 from models.schemas import Chunk, ChunkMetadata, DocumentSourceType
 
@@ -29,7 +29,7 @@ def populated_store() -> VectorStore:
         )
         for i, t in enumerate(SAMPLE_TEXTS)
     ]
-    embeddings = embed_texts(SAMPLE_TEXTS)
+    embeddings = embed_documents(SAMPLE_TEXTS)
     store = VectorStore(dim=embeddings.shape[1])
     store.add(chunks, embeddings)
     return store

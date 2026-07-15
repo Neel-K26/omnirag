@@ -12,26 +12,30 @@ from ragas.run_config import RunConfig
 
 from config import get_settings
 from gemini_client import get_gemini_client
-from ingestion.embeddings import embed_texts
+from ingestion.embeddings import embed_documents as _embed_documents
+from ingestion.embeddings import embed_query as _embed_query
 from models.schemas import RagasScores
 
 CONTEXT_PRECISION = LLMContextPrecisionWithoutReference()
 METRICS = [faithfulness, answer_relevancy, CONTEXT_PRECISION]
 
 
-class _SentenceTransformerRagasEmbeddings(BaseRagasEmbeddings):
-    """Reuses the already-loaded sentence-transformers singleton (ingestion.embeddings)
-    instead of loading a second copy of the model via langchain_huggingface."""
+class _CohereRagasEmbeddings(BaseRagasEmbeddings):
+    """Reuses the shared Cohere embedding functions (ingestion.embeddings) instead of a
+    separate langchain-cohere integration. answer_relevancy compares a generated candidate
+    question against the original question — both sides are question-like comparison text,
+    not a document-vs-query search, so both use the "search_query" input_type (embed_query)
+    rather than mixing in embed_documents' "search_document" type."""
 
     def __init__(self):
         super().__init__()
         self.set_run_config(RunConfig())
 
     def embed_query(self, text: str) -> list[float]:
-        return embed_texts([text])[0].tolist()
+        return _embed_query(text).tolist()
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return embed_texts(texts).tolist()
+        return [_embed_query(t).tolist() for t in texts]
 
     async def aembed_query(self, text: str) -> list[float]:
         return self.embed_query(text)
@@ -115,8 +119,8 @@ def get_ragas_llm() -> _GeminiRagasLLM:
 
 
 @lru_cache
-def get_ragas_embeddings() -> _SentenceTransformerRagasEmbeddings:
-    return _SentenceTransformerRagasEmbeddings()
+def get_ragas_embeddings() -> _CohereRagasEmbeddings:
+    return _CohereRagasEmbeddings()
 
 
 def _row_to_scores(row) -> RagasScores:

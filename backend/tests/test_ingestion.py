@@ -1,7 +1,7 @@
 import fitz
 
 from ingestion.chunking import chunk_text
-from ingestion.embeddings import embed_texts, get_embedding_dim
+from ingestion.embeddings import embed_documents, embed_query, get_embedding_dim
 from ingestion.parsers import extract_text_from_html, parse_pdf, parse_text
 from ingestion.store import VectorStore
 from models.schemas import Chunk, ChunkMetadata, DocumentSourceType
@@ -71,9 +71,14 @@ def test_extract_text_from_html_strips_scripts():
     assert "bad()" not in text
 
 
-def test_embed_texts_shape():
-    embeddings = embed_texts(["hello world", "clinical trial results"])
+def test_embed_documents_shape():
+    embeddings = embed_documents(["hello world", "clinical trial results"])
     assert embeddings.shape == (2, get_embedding_dim())
+
+
+def test_embed_query_shape():
+    embedding = embed_query("hello world")
+    assert embedding.shape == (get_embedding_dim(),)
 
 
 def test_vector_store_dense_and_sparse_search(tmp_path):
@@ -96,11 +101,11 @@ def test_vector_store_dense_and_sparse_search(tmp_path):
         )
         for i, t in enumerate(texts)
     ]
-    embeddings = embed_texts(texts)
+    embeddings = embed_documents(texts)
     store = VectorStore(dim=embeddings.shape[1])
     store.add(chunks, embeddings)
 
-    query_embedding = embed_texts(["What raises the risk of stroke?"])[0]
+    query_embedding = embed_query("What raises the risk of stroke?")
     dense_results = store.search_dense(query_embedding, top_k=3)
     assert dense_results[0][0].text.startswith("Hypertension")
 

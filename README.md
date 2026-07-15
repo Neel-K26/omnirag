@@ -8,10 +8,11 @@ domains (legal, enterprise, financial).
 
 ## Stack
 
-- **Backend**: FastAPI (Python 3.12), FAISS + BM25 hybrid retrieval, Cohere Rerank, Gemini
-  (`gemini-flash-lite-latest` for generation, routing fallback, and the sufficiency check),
-  RAGAS (evaluated by the same Gemini model, via a small custom `BaseRagasLLM` wrapper —
-  see [Known issues](#known-issues))
+- **Backend**: FastAPI (Python 3.12), FAISS + BM25 hybrid retrieval, Cohere (reranking +
+  `embed-english-light-v3.0` for embeddings — no local ML model, see
+  [Known issues](#known-issues)), Gemini (`gemini-flash-lite-latest` for generation, routing
+  fallback, and the sufficiency check), RAGAS (evaluated by the same Gemini model, via a small
+  custom `BaseRagasLLM` wrapper)
 - **Frontend**: Next.js 16 (App Router), Tailwind CSS v4, shadcn/ui
 
 ## Local development
@@ -47,7 +48,7 @@ hardcoded in `frontend/next.config.ts` and will ignore this file; see that file'
 | Variable | Where | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | backend | Gemini API key (generation, routing fallback, sufficiency check, RAGAS judge) |
-| `COHERE_API_KEY` | backend | Cohere API key (reranking) |
+| `COHERE_API_KEY` | backend | Cohere API key (reranking + embeddings) |
 | `FRONTEND_URL` | backend | Comma-separated list of allowed CORS origins. Default `http://localhost:3000` |
 | `DATA_DIR` | backend | Where the FAISS index / BM25 corpus / document registry persist. Default `backend/data/index` (self-contained, container-safe) |
 | `NEXT_PUBLIC_API_URL` | frontend | URL of the backend API. **Currently hardcoded as a build-time constant in `frontend/next.config.ts`** — editing this file, `.env.local`, or Vercel's dashboard has no effect until that hardcode is changed or removed. See that file's comment for why. |
@@ -86,14 +87,30 @@ except `NEXT_PUBLIC_API_URL` as noted.
 - **Render free tier spins the backend down after ~15 minutes of inactivity.** The first
   request after that hits a cold start; Render's proxy returns 502 before the app is even up
   to attach CORS headers, which browsers report as a CORS error rather than a 502 — confusing,
-  but not actually a CORS misconfiguration. Two mitigations, neither alone fully eliminates it:
-  `backend/warmup.py` runs at app startup (blocking — the app won't accept connections, and
-  `/health` won't succeed, until the slow part is done) so a cold-started instance is ready
-  faster once it's up; `frontend/lib/api.ts`'s `fetchWithRetry` retries once after a 3s wait on
-  a 502. `.github/workflows/keep-alive.yml` pings `/health` every 10 minutes to keep the
-  instance from spinning down at all in the first place — **this is the part that actually
-  prevents spin-down**; Render's own dashboard "Health Check Path" setting (see below) affects
-  deploy-readiness and auto-restart-on-failure, not free-tier inactivity spin-down.
+  but not actually a CORS misconfiguration. Two mitigations: `frontend/lib/api.ts`'s
+  `fetchWithRetry` retries once after a 3s wait on a 502; `.github/workflows/keep-alive.yml`
+  pings `/health` every 10 minutes to keep the instance from spinning down at all — **this is
+  the part that actually prevents spin-down**; Render's own dashboard "Health Check Path"
+  setting (see below) affects deploy-readiness and auto-restart-on-failure, not free-tier
+  inactivity spin-down.
+- **Render free tier's 512MB RAM limit ruled out local embeddings entirely.** This app
+  originally used a local sentence-transformers model for embeddings. Measured RSS once that
+  model was actually used (import + weights + one `encode()` call): ~630MB — over the limit
+  regardless of lazy-loading, since chat always needs at least a query embedding, so the
+  process would get OOM-killed (not a graceful per-request failure — Render kills the whole
+  container, taking down every in-flight request) the moment anyone sent a real chat message.
+  Switched to Cohere's `embed-english-light-v3.0` API instead (see `ingestion/embeddings.py`)
+  — zero local model, at the cost of a network call on every embed (ingestion and every
+  query's retrieval step). Measured post-migration: ~196MB at boot, ~199MB after a chat query,
+  ~362MB even in the worst case (a RAGAS evaluation call, which also imports `ragas` — see
+  next point). Also worth knowing if you profile this yourself: `ragas` (+ its
+  `langchain_openai` transitive dependency, which our code never calls directly — `ragas`
+  imports it internally) costs ~300MB at import time, more than the entire former local
+  embedding stack combined. `routers/chat.py`, `routers/retrieval.py`, and
+  `routers/benchmark.py` import `evaluate_response` lazily inside their handler functions
+  rather than at module level for exactly this reason — otherwise that cost would be paid at
+  every process boot regardless of whether evaluation is ever used, the same class of problem
+  local embeddings had.
 
 ## Deployment
 
@@ -114,9 +131,9 @@ Backend on Render, frontend on Vercel.
    going live, either attach a [Render Disk](https://render.com/docs/disks) mounted at a fixed
    path and set `DATA_DIR` to that mount path, or treat the deployment as stateless/demo-only
    and re-ingest documents after each deploy/spin-down cycle.
-5. **Image size**: the `Dockerfile` explicitly installs the CPU-only PyTorch wheel before
-   `requirements.txt` — plain `pip install torch` resolves to the CUDA-enabled build (3GB+
-   larger) even with no GPU present, which would otherwise slow every build significantly.
+5. **Memory**: see the 512MB RAM note under Known Issues above — this matters more than image
+   size on Render's free tier. `MALLOC_ARENA_MAX=2` is set in the Dockerfile to reduce glibc
+   heap fragmentation overhead on top of the embeddings-provider fix.
 
 ### Frontend → Vercel
 
@@ -133,4 +150,4 @@ Backend on Render, frontend on Vercel.
 ### Not covered above
 
 - No CI pipeline configured yet (tests currently run manually).
-- No rate limiting / auth on the backend API — anyone with the Railway URL can call it.
+- No rate limiting / auth on the backend API — anyone with the Render URL can call it.

@@ -3,7 +3,6 @@ import time
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from evaluation.ragas_eval import evaluate_response
 from generation.generate import stream_answer
 from models.schemas import RagasScores, RetrievalStrategy, StrategyResult
 from retrieval.hybrid import retrieve
@@ -30,6 +29,10 @@ def _run_strategy(query: str, strategy: RetrievalStrategy) -> StrategyResult:
     latency_ms = (time.perf_counter() - start) * 1000
 
     if chunks:
+        # Imported lazily — see routers/chat.py's chat_evaluate for why (ragas costs ~300MB
+        # at import time, the dominant memory cost in this app).
+        from evaluation.ragas_eval import evaluate_response
+
         ragas = evaluate_response(query, answer, [c.text for c in chunks])
     else:
         ragas = RagasScores(faithfulness=0.0, answer_relevancy=0.0, context_precision=0.0)

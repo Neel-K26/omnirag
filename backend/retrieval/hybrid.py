@@ -1,4 +1,4 @@
-from ingestion.embeddings import embed_texts
+from ingestion.embeddings import embed_query
 from ingestion.store import get_vector_store
 from models.schemas import Chunk, RetrievalStrategy
 from retrieval.fusion import reciprocal_rank_fusion
@@ -11,7 +11,7 @@ DEFAULT_TOP_K = 5
 
 def dense_only(query: str, top_k: int = DEFAULT_TOP_K) -> list[tuple[Chunk, float]]:
     store = get_vector_store()
-    query_embedding = embed_texts([query])[0]
+    query_embedding = embed_query(query)
     return store.search_dense(query_embedding, top_k=top_k)
 
 
@@ -22,7 +22,7 @@ def sparse_only(query: str, top_k: int = DEFAULT_TOP_K) -> list[tuple[Chunk, flo
 
 def _fuse(query: str) -> list[tuple[Chunk, float]]:
     store = get_vector_store()
-    query_embedding = embed_texts([query])[0]
+    query_embedding = embed_query(query)
     dense_chunks = [c for c, _ in store.search_dense(query_embedding, top_k=DENSE_TOP_K)]
     sparse_chunks = [c for c, _ in store.search_sparse(query, top_k=SPARSE_TOP_K)]
     return reciprocal_rank_fusion([dense_chunks, sparse_chunks])

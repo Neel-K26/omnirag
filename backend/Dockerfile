@@ -8,20 +8,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 
-# requirements.txt itself pins an exact CPU-only torch build (torch==2.9.1+cpu via
-# --extra-index-url) — no separate install step needed here.
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-
-# Pre-download the embedding model at build time so it's baked into the image layer instead
-# of being fetched (and potentially slow or flaky) on the first request at runtime.
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 
 ENV PORT=8000
+# Caps glibc's per-thread malloc arenas to reduce heap fragmentation/overhead — meaningful
+# headroom on a memory-constrained instance (Render free tier: 512MB), at the cost of some
+# malloc contention under concurrent load, which isn't a concern at this app's traffic level.
+ENV MALLOC_ARENA_MAX=2
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

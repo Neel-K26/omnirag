@@ -1,17 +1,7 @@
-from functools import lru_cache
-
-import cohere
-
-from config import get_settings
+from cohere_client import get_cohere_client
 from models.schemas import Chunk
 
 RERANK_MODEL = "rerank-english-v3.0"
-
-
-@lru_cache
-def get_cohere_client() -> cohere.ClientV2:
-    settings = get_settings()
-    return cohere.ClientV2(api_key=settings.cohere_api_key)
 
 
 def rerank(query: str, chunks: list[Chunk], top_n: int = 5) -> list[tuple[Chunk, float]]:

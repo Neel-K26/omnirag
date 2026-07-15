@@ -4,7 +4,6 @@ from statistics import mean
 from fastapi import APIRouter
 
 from benchmark import BENCHMARK_QUERIES
-from evaluation.ragas_eval import evaluate_response
 from generation.adaptive import adaptive_retrieve
 from generation.generate import stream_answer
 from models.schemas import BenchmarkQueryResult, BenchmarkRunResponse, RagasScores
@@ -19,6 +18,10 @@ def _run_benchmark_query(query: str) -> BenchmarkQueryResult:
     latency_ms = (time.perf_counter() - start) * 1000
 
     if result.final_chunks:
+        # Imported lazily — see routers/chat.py's chat_evaluate for why (ragas costs ~300MB
+        # at import time, the dominant memory cost in this app).
+        from evaluation.ragas_eval import evaluate_response
+
         ragas = evaluate_response(query, answer, [c.text for c in result.final_chunks])
     else:
         ragas = RagasScores(faithfulness=0.0, answer_relevancy=0.0, context_precision=0.0)

@@ -7,7 +7,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from config import get_settings
-from evaluation.ragas_eval import evaluate_response
 from generation.adaptive import adaptive_retrieve
 from generation.generate import build_citations, stream_answer
 from models.schemas import RagasScores
@@ -86,4 +85,9 @@ class EvaluateRequest(BaseModel):
 
 @router.post("/evaluate", response_model=RagasScores)
 def chat_evaluate(payload: EvaluateRequest):
+    # Imported lazily: ragas (+ its langchain_openai transitive dependency) costs ~300MB at
+    # import time — the dominant single cost in this app, well above the embedding model
+    # itself. Deferring it here means /chat/stream, /documents, and /health never pay for it.
+    from evaluation.ragas_eval import evaluate_response
+
     return evaluate_response(payload.query, payload.response, payload.contexts)
