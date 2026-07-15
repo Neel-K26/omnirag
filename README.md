@@ -83,45 +83,50 @@ except `NEXT_PUBLIC_API_URL` as noted.
 - **Gemini free-tier rate limits.** Requests can still be throttled or quota-exhausted during
   heavy testing (adaptive retrieval, generation, and RAGAS evaluation all call Gemini) — not a
   bug in this app.
+- **Render free tier spins the backend down after ~15 minutes of inactivity.** The first
+  request after that hits a cold start; Render's proxy returns 502 before the app is even up
+  to attach CORS headers, which browsers report as a CORS error rather than a 502 — confusing,
+  but not actually a CORS misconfiguration. Two mitigations, neither alone fully eliminates it:
+  `backend/warmup.py` runs at app startup (blocking — the app won't accept connections, and
+  `/health` won't succeed, until the slow part is done) so a cold-started instance is ready
+  faster once it's up; `frontend/lib/api.ts`'s `fetchWithRetry` retries once after a 3s wait on
+  a 502. `.github/workflows/keep-alive.yml` pings `/health` every 10 minutes to keep the
+  instance from spinning down at all in the first place — **this is the part that actually
+  prevents spin-down**; Render's own dashboard "Health Check Path" setting (see below) affects
+  deploy-readiness and auto-restart-on-failure, not free-tier inactivity spin-down.
 
 ## Deployment
 
-Not yet deployed — this section documents what's needed when you are ready.
+Backend on Render, frontend on Vercel.
 
-### Backend → Railway
+### Backend → Render
 
-1. **New service, root directory = `backend/`.** Railway auto-detects the `Dockerfile` there
-   and builds from it — no build/start command overrides needed (the `Dockerfile`'s `CMD`
-   already binds to Railway's injected `$PORT` and uses `--loop asyncio`).
-2. **Environment variables to set** (Railway → Variables): `GEMINI_API_KEY`, `COHERE_API_KEY`,
-   `FRONTEND_URL` (set this to your Vercel production URL once you have it — see the
-   chicken-and-egg note below).
-3. **Health check**: `/health`, already implemented and exercised by the Dockerfile's
-   `HEALTHCHECK` directive; point Railway's own health check at the same path if it asks.
-4. **Persistent storage — read this before relying on ingested documents.** Railway's
-   container filesystem is ephemeral: every redeploy or restart wipes `backend/data/index`
-   (the FAISS index, BM25 corpus, and document registry), silently losing every ingested
-   document. Before going live, either:
-   - attach a [Railway Volume](https://docs.railway.com/reference/volumes) mounted at a fixed
-     path and set `DATA_DIR` to that mount path, or
-   - treat the deployment as stateless/demo-only and re-ingest documents after each deploy.
-   This wasn't fixed automatically because volume provisioning is a Railway-console action,
-   not something expressible in code.
+1. **Web service, root directory = `backend/`.** Render auto-detects the `Dockerfile` there.
+2. **Environment variables to set** (Render dashboard → Environment): `GEMINI_API_KEY`,
+   `COHERE_API_KEY`, `FRONTEND_URL` (your Vercel production URL).
+3. **Health check**: in the Render dashboard, set **Health Check Path** to `/health` (Settings →
+   Health & Alerts, or wherever your Render UI surfaces it). This affects deploy-readiness and
+   auto-restart-on-failure — it does **not** prevent free-tier spin-down from inactivity, which
+   is what `.github/workflows/keep-alive.yml` is for instead (see Known Issues above).
+4. **Persistent storage — read this before relying on ingested documents.** Render's container
+   filesystem is ephemeral: every redeploy or restart wipes `backend/data/index` (the FAISS
+   index, BM25 corpus, and document registry), silently losing every ingested document. Before
+   going live, either attach a [Render Disk](https://render.com/docs/disks) mounted at a fixed
+   path and set `DATA_DIR` to that mount path, or treat the deployment as stateless/demo-only
+   and re-ingest documents after each deploy/spin-down cycle.
 5. **Image size**: the `Dockerfile` explicitly installs the CPU-only PyTorch wheel before
    `requirements.txt` — plain `pip install torch` resolves to the CUDA-enabled build (3GB+
    larger) even with no GPU present, which would otherwise slow every build significantly.
 
 ### Frontend → Vercel
 
-1. **New project, root directory = `frontend/`.** Vercel auto-detects Next.js; no config
-   overrides needed (`next.config.ts` is already Vercel-ready — static output, no custom
-   server, `poweredByHeader: false`).
-2. **Environment variable**: `NEXT_PUBLIC_API_URL` = your Railway backend's public URL.
-   Set it in Vercel → Settings → Environment Variables (`.env.local` is not deployed).
-3. **Deployment order**: deploy the backend first to get its Railway URL for
-   `NEXT_PUBLIC_API_URL`, then deploy the frontend to get its Vercel URL, then go back to
-   Railway and set `FRONTEND_URL` to that Vercel URL so CORS allows it. `FRONTEND_URL` accepts
-   a comma-separated list if you also add a custom domain later.
+1. **New project, root directory = `frontend/`.** Vercel auto-detects Next.js.
+2. **`NEXT_PUBLIC_API_URL`** is currently hardcoded as a build-time constant in
+   `frontend/next.config.ts` (see that file's comment for why) — setting it in Vercel's
+   dashboard, `.env.local`, or anywhere else has no effect until that hardcode is changed.
+3. **CORS**: after deploying the frontend, set the backend's `FRONTEND_URL` (Render dashboard)
+   to the resulting Vercel URL so CORS allows it. Accepts a comma-separated list if you add a
+   custom domain later.
 4. `npm run build` currently passes clean (TypeScript, ESLint, and the production build all
    succeed with no errors or warnings) — verified locally before this section was written.
 

@@ -1,0 +1,18 @@
+name: Keep Render backend alive
+
+# Render's free tier spins the service down after ~15 minutes of no incoming HTTP traffic —
+# this is independent of the dashboard "Health Check Path" setting (that setting affects
+# deploy-readiness and auto-restart-on-failure, not free-tier spin-down). Pinging /health
+# on an interval comfortably inside that window is what actually keeps it warm.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          curl -sf https://omnirag-87oc.onrender.com/health || echo "Ping failed — backend may be cold-starting or down, not treating this as a workflow failure."

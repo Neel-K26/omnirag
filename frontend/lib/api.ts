@@ -9,6 +9,21 @@ import type {
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://omnirag-87oc.onrender.com";
 
+// Render's free tier spins the backend down after inactivity; the first request after that
+// hits a cold start and the proxy returns 502 before the app is even up to attach CORS
+// headers, which the browser then reports as a CORS error rather than a 502. One automatic
+// retry after a short wait covers the common case where the instance finishes booting
+// (backend/warmup.py) in that window. `init` is safe to reuse across both attempts — neither
+// a JSON string body nor FormData is consumed by being passed to fetch.
+async function fetchWithRetry(input: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(input, init);
+  if (res.status === 502) {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    return fetch(input, init);
+  }
+  return res;
+}
+
 async function handleJsonResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => null);
@@ -24,12 +39,12 @@ export interface IngestResponse {
 }
 
 export async function listDocuments(): Promise<DocumentItem[]> {
-  const res = await fetch(`${API_URL}/documents`);
+  const res = await fetchWithRetry(`${API_URL}/documents`);
   return handleJsonResponse<DocumentItem[]>(res);
 }
 
 export async function uploadText(text: string, title: string): Promise<IngestResponse> {
-  const res = await fetch(`${API_URL}/documents/text`, {
+  const res = await fetchWithRetry(`${API_URL}/documents/text`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, title }),
@@ -38,7 +53,7 @@ export async function uploadText(text: string, title: string): Promise<IngestRes
 }
 
 export async function uploadUrl(url: string): Promise<IngestResponse> {
-  const res = await fetch(`${API_URL}/documents/url`, {
+  const res = await fetchWithRetry(`${API_URL}/documents/url`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url }),
@@ -49,7 +64,7 @@ export async function uploadUrl(url: string): Promise<IngestResponse> {
 export async function uploadPdf(file: File): Promise<IngestResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await fetch(`${API_URL}/documents/pdf`, {
+  const res = await fetchWithRetry(`${API_URL}/documents/pdf`, {
     method: "POST",
     body: formData,
   });
@@ -57,7 +72,7 @@ export async function uploadPdf(file: File): Promise<IngestResponse> {
 }
 
 export async function* streamChat(query: string, signal?: AbortSignal): AsyncGenerator<ChatStreamEvent> {
-  const res = await fetch(`${API_URL}/chat/stream`, {
+  const res = await fetchWithRetry(`${API_URL}/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
@@ -91,7 +106,7 @@ export async function* streamChat(query: string, signal?: AbortSignal): AsyncGen
 }
 
 export async function evaluateChat(query: string, response: string, contexts: string[]): Promise<RagasScores> {
-  const res = await fetch(`${API_URL}/chat/evaluate`, {
+  const res = await fetchWithRetry(`${API_URL}/chat/evaluate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, response, contexts }),
@@ -100,7 +115,7 @@ export async function evaluateChat(query: string, response: string, contexts: st
 }
 
 export async function compareStrategies(query: string): Promise<CompareResponse> {
-  const res = await fetch(`${API_URL}/retrieval/compare`, {
+  const res = await fetchWithRetry(`${API_URL}/retrieval/compare`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
@@ -109,11 +124,11 @@ export async function compareStrategies(query: string): Promise<CompareResponse>
 }
 
 export async function getBenchmarkQueries(): Promise<string[]> {
-  const res = await fetch(`${API_URL}/benchmark/queries`);
+  const res = await fetchWithRetry(`${API_URL}/benchmark/queries`);
   return handleJsonResponse<string[]>(res);
 }
 
 export async function runBenchmark(): Promise<BenchmarkRunResponse> {
-  const res = await fetch(`${API_URL}/benchmark/run`, { method: "POST" });
+  const res = await fetchWithRetry(`${API_URL}/benchmark/run`, { method: "POST" });
   return handleJsonResponse<BenchmarkRunResponse>(res);
 }
